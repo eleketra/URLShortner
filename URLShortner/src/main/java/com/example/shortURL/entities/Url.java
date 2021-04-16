@@ -1,40 +1,48 @@
 package com.example.shortURL.entities;
 
+import java.io.Serializable;
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.SequenceGenerator;
 
+//@AllArgsConstructor
+//@NoArgsConstructor
 @Entity
-public class Url {
+
+public class Url implements Serializable{
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	
-	@SequenceGenerator(name = "port_gen", sequenceName = "port_gen",  initialValue = 1234567890)
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE,generator = "port_gen")
-	private long id;
-	private String oldUrl;
-	
-	public Url()
-	{
+	@Id
+	private String shortUrl;
+	private String longUrl;
+
+	public Url() {
 		super();
 	}
-	public Url(long id, String oldUrl) {
+
+	public Url(String longUrl) {
 		super();
-		this.id = id;
-		this.oldUrl = oldUrl;
+		this.longUrl = longUrl;
+		
 	}
-	public long getId() {
-		return id;
+
+	public String getShortUrl() {
+		return shortUrl;
 	}
-	public void setId(long id) {
-		this.id = id;
+
+	public void setShortUrl(String shortUrl) {
+		this.shortUrl = shortUrl;
 	}
-	public String getOldUrl() {
-		return oldUrl;
+
+	public String getLongUrl() {
+		return longUrl;
 	}
-	public void setOldUrl(String oldUrl) {
-		this.oldUrl = oldUrl;
+
+	public void setLongUrl(String longUrl) {
+		this.longUrl = longUrl;
 	}
-			
+
 }

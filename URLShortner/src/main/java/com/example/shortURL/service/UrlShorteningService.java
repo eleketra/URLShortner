@@ -1,9 +1,15 @@
 package com.example.shortURL.service;
 
+import java.io.UnsupportedEncodingException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-
+import org.hibernate.type.StringType;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CacheConfig;
+
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -11,64 +17,49 @@ import com.example.shortURL.dao.UrlDao;
 import com.example.shortURL.entities.Url;
 
 @Service
-//@CacheConfig(cacheNames = "url")
+@CacheConfig(cacheNames = "url")
 public class UrlShorteningService {
-	
-	final String allowedString = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-   
-	
+
+	final String baseUrl = "http://localhost:8080/";
 	@Autowired
 	private UrlDao urlrepo;
 
-	@CacheEvict(value = "allUrlcache", allEntries = true)
+	@Autowired
+	private EncodingService encodeService;
+
+	// service to create new short url
 	public String creatShortUrl(String longUrl) {
-		
-		
-		Url url=new Url();
-		url.setOldUrl(longUrl);
-		Url entity=urlrepo.save(url);
-		
-		//return "https://wheelseye.com/"+encode(entity.getId());
-		
-		return "http://localhost:8080/"+encode(entity.getId());
-		
+
+		String hash = encodeService.generate_hash(longUrl);
+		Url url = new Url();
+		url.setLongUrl(longUrl);
+		String shorturl = "";
+		for (int i = 0; i < hash.length() - 6; i++) {
+			shorturl = encodeService.base_convert(hash.substring(i, i + 6));
+			url.setShortUrl(shorturl);
+			if (urlrepo.save(url) != null)
+				break;
+		}
+		return baseUrl + shorturl;
+
 	}
 
-	private String encode(long value) {
-		 StringBuilder sb = new StringBuilder();
-		    while (value != 0) {
-		        sb.append(allowedString.charAt((int)(value % 62)));
-		        value /= 62;
-		    }
-		   /* while (sb.length() < 6) {
-		        sb.append(0);
-		    }*/
-		    return sb.reverse().toString();
-	
+	// service to check for already present shorten url
+	@Cacheable(value = "shortUrl", key = "#longUrl")
+	public String checkifPresent(String longUrl) {
+		Url url = urlrepo.findByLongUrl(longUrl);
+		if (url != null)
+			return baseUrl + url.getShortUrl();
+		else
+			return null;
 	}
-	
-	private long decode(String shortUrl)
-	{
-		String todecode=shortUrl;//.substring(shortUrl.lastIndexOf("/")+1);
-		int counter=todecode.length()-1;
-		long result=0;
-		for(int i=0;i<todecode.length();i++)
-		{
-			result+=allowedString.indexOf(todecode.charAt(i))*Math.pow(62, counter);
-			counter--;
-			
-		}
-		
-		return result;
-	}
-	
-	@Cacheable("url")
-	public String getOriginalUrl(String shortUrl)
-	{
-		
-		long id=decode(shortUrl);
-		Url entity=urlrepo.findById(id).orElseThrow();
-		return entity.getOldUrl();
+
+	// service to get the original url for redirection
+	@Cacheable(value = "longUrl", key = "#shortUrl")
+	public String getOriginalUrl(String shortUrl) {
+
+		Url entity = urlrepo.findById(shortUrl).orElseThrow();
+		return entity.getLongUrl();
 	}
 
 }
